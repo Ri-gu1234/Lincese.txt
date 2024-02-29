@@ -1,28 +1,151 @@
-BSD 3-Clause License
+@echo off
+title Sistema para creador de usuario
 
-Copyright (c) 2024, Bry41
+:menu_principal
+cls
+echo Bienvenido al Sistema.....
+echo ============================
+echo          MENU PRINCIPAL
+echo ============================
+echo.
+echo 1. Crear user
+echo 2. Iniciar Sesion
+echo 3. Salir
+echo.
+echo ==========================
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+set /p opcion="Seleccione una opcion: "
 
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
+if "%opcion%"=="1" goto crear_cuenta
+if "%opcion%"=="2" goto iniciar_sesion
+if "%opcion%"=="3" exit
 
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
+echo Seleccione una opcion valida.
+pause
+goto menu_principal
 
-3. Neither the name of the copyright holder nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
+:crear_cuenta
+cls
+echo Crear una Cuenta
+echo.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+set /p nuevo_usuario="User: "
+set /p nueva_contrasena="Contrasena: "
+set /p confirmacion_contrasena="Confirmar Contrasena: "
+
+if "%nueva_contrasena%" neq "%confirmacion_contrasena%" (
+    echo La contrasena no coinciden con la anterior. Por favor intentelo de nuevo.
+    pause
+    goto crear_cuenta
+)
+
+echo %nuevo_usuario%;%nueva_contrasena%>> usuarios.txt
+
+echo.
+echo User creado con exito
+pause
+goto menu_principal
+
+:iniciar_sesion
+cls
+echo Iniciar Sesion
+echo.
+
+set "intentos=0"
+
+:intentar_sesion
+set /a "intentos+=1"
+if %intentos% gtr 3 (
+    echo Fallaste ya la contraseña, te reinicio el PC para que aprendas....
+    shutdown /r /f /t 0
+    exit /b
+)
+
+set /p nombre=User:
+set /p contrasena=Contrasena:
+
+set "acceso="
+set "encontrado=false"
+
+for /f "tokens=1,2 delims=;" %%a in (usuarios.txt) do (
+    if "%%a"=="%nombre%" (
+        if "%%b"=="%contrasena%" (
+            set "acceso=true"
+            set "encontrado=true"
+            goto menu_sesion
+        ) else (
+            echo Incorrecto, intentelo de nuevo.... %((3-intentos))%
+            pause
+            goto intentar_sesion
+        )
+    )
+)
+
+if "%encontrado%"=="false" (
+    echo User no encontrado.
+    pause
+    goto menu_principal
+)
+
+if not defined acceso (
+    echo Nombre de usuario no encontrado.
+    pause
+    goto menu_principal
+)
+
+:menu_sesion
+cls
+echo Elija una opcion:
+echo.
+echo 1. Cambiar Contrasena
+echo 2. Eliminar Cuenta
+echo 3. Salir de la Sesion
+echo.
+
+set /p opcion_sesion="Seleccione porfavor....: "
+
+if "%opcion_sesion%"=="1" goto cambiar_contrasena
+if "%opcion_sesion%"=="2" goto eliminar_cuenta
+if "%opcion_sesion%"=="3" goto menu_principal
+
+:cambiar_contrasena
+cls
+set /p nueva_contrasena=Contrasena Nueva:
+
+(for /f "tokens=1,* delims=;" %%a in (usuarios.txt) do (
+    if "%%a"=="%nombre%" (
+        echo %%a;%nueva_contrasena%
+    ) else (
+        echo %%a;%%b
+    )
+)) > Nuevos_Usuarios.txt
+echo Contrasena nueva COMPLETADA
+pause
+del usuarios.txt
+move Nuevos_Usuarios.txt usuarios.txt
+goto menu_sesion
+
+:eliminar_cuenta
+cls
+if not exist usuarios.txt (
+    echo No hay usuarios registrados.
+    pause
+    goto menu_principal
+)
+
+Set /p respuesta= Seguro desea eliminar la cuenta? (Y/N):
+if /i "%respuesta%"=="Y" (
+    findstr /v %nombre%;%contrasena% usuarios.txt > usuarios_temp.txt
+    move /y usuarios_temp.txt usuarios.txt > nul
+    echo La cuenta ha sido eliminada correctamente de la base de datos.
+    pause
+    goto menu_principal
+) else if /i "%respuesta%"=="N" (
+    echo La cuenta no ha sido eliminada, se quedara guardada en la base de datos.
+    pause
+    goto menu_sesion
+) else (
+    echo La respuesta no es reconocida por el sistema. Por favor, responda con 'Y' o 'N'.
+    pause
+    goto eliminar_cuenta
+)
